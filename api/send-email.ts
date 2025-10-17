@@ -1,56 +1,54 @@
-// /api/send-email.ts
-import type { IncomingMessage, ServerResponse } from "http";
+import { Resend } from 'resend';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-export default async function handler(req: IncomingMessage & { body?: any }, res: ServerResponse & { statusCode?: number; end: (data?: any) => void }) {
-  if (req.method !== "POST") {
-    res.statusCode = 405;
-    res.end(JSON.stringify({ error: "Method not allowed" }));
-    return;
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Enable CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
     const { name, email, message, type } = req.body;
 
+    console.log('📧 Email request received:', { name, email, type });
+
     if (!name || !email || !message) {
-      res.statusCode = 400;
-      res.end(JSON.stringify({ error: "Missing required fields" }));
-      return;
+      console.error('❌ Missing required fields');
+      return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: "GT Website <no-reply@gth.guru>",
-        to: ["onisurutejiritj@gmail.com"],
-        subject:
-          type === "collaboration"
-            ? `🤝 Collaboration Request from ${name}`
-            : `📬 Message from ${name}`,
-        html: `
-          <h2>${type === "collaboration" ? "New Collaboration Request" : "New Contact Message"}</h2>
-          <p><strong>Name:</strong> ${name}</p>
-          <p><strong>Email:</strong> ${email}</p>
-          <p><strong>Message:</strong></p>
-          <p>${message}</p>
-          <hr />
-          <p>Sent from <a href="https://gth.guru">gth.guru</a></p>
-        `,
-      }),
+    const emailData = await resend.emails.send({
+      from: 'GT Website <no-reply@gth.guru>',
+      to: ['onisurutejiritj@gmail.com'],
+      subject: type === 'collaboration'
+        ? `🤝 Collaboration Request from ${name}`
+        : `📬 Message from ${name}`,
+      html: `
+        <h2>${type === 'collaboration' ? 'New Collaboration Request' : 'New Contact Message'}</h2>
+        <p><strong>Name:</strong> ${name}</p>
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Message:</strong></p>
+        <p>${message}</p>
+        <hr />
+        <p>Sent from <a href="https://gth.guru">gth.guru</a></p>
+      `,
     });
 
-    if (!response.ok) {
-      throw new Error("Resend API request failed");
-    }
+    console.log('✅ Email sent successfully:', emailData);
 
-    res.statusCode = 200;
-    res.end(JSON.stringify({ success: true }));
-  } catch (error) {
-    console.error("Email send error:", error);
-    res.statusCode = 500;
-    res.end(JSON.stringify({ error: "Failed to send email" }));
+    return res.status(200).json({ success: true, id: emailData.id });
+  } catch (error: any) {
+    console.error('❌ Email send error:', error);
+    return res.status(500).json({ error: 'Failed to send email', details: error.message });
   }
 }
