@@ -42,27 +42,54 @@ const Contact = () => {
     message: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Create mailto link with form data
-    const subject = encodeURIComponent(`Message from ${formData.name}`);
-    const body = encodeURIComponent(`Name: ${formData.name}\nEmail: ${formData.email}\n\nMessage:\n${formData.message}`);
-    window.location.href = `mailto:onisurutejiritj@gmail.com?subject=${subject}&body=${body}`;
-    
-    toast({
-      title: "Opening email client",
-      description: "Your default email client will open with the message pre-filled.",
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  toast({
+    title: "Sending message...",
+    description: "Please wait while your message is delivered.",
+  });
+
+  try {
+    const response = await fetch("/api/send-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: formData.name,
+        email: formData.email,
+        message: formData.message,
+        type: "message",
+      }),
     });
-    
-    setFormData({ name: "", email: "", message: "" });
-  };
+
+    if (response.ok) {
+      toast({
+        title: "✅ Message Sent!",
+        description: "Thank you for reaching out. I’ll reply soon.",
+      });
+      setFormData({ name: "", email: "", message: "" });
+    } else {
+      toast({
+        title: "Error",
+        description: "Something went wrong. Please try again later.",
+      });
+    }
+  } catch (error) {
+    toast({
+      title: "Network Error",
+      description: "Unable to send message. Please check your connection.",
+    });
+  }
+};
+
 
   const handleDownloadCV = () => {
-    toast({
-      title: "CV Download",
-      description: "CV download will be available soon!",
-    });
+   const link = document.createElement('a');
+  link.href = '/Onisuru_Tejiri_Godstime_GT.pdf';
+  link.download = 'Onisuru_Tejiri_Godstime_GT.pdf';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
   };
 
   return (
@@ -124,11 +151,39 @@ const Contact = () => {
                     Download CV
                   </Button>
                   <Button
-                    variant="outline"
-                    className="w-full border-2 border-primary/20 hover:border-primary hover:bg-primary/5"
-                  >
-                    Request Collaboration
-                  </Button>
+  variant="outline"
+  className="w-full border-2 border-primary/20 hover:border-primary hover:bg-primary/5"
+  onClick={async () => {
+    const name = prompt("Enter your name:");
+    const email = prompt("Enter your email:");
+    const message = prompt("Briefly describe your collaboration idea:");
+
+    if (!name || !email || !message) return;
+
+    toast({ title: "Sending collaboration request..." });
+
+    const res = await fetch("/api/send-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, message, type: "collaboration" }),
+    });
+
+    if (res.ok) {
+      toast({
+        title: "✅ Collaboration Request Sent!",
+        description: "I’ll reach out soon to discuss your idea.",
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "Couldn’t send your request. Please try again.",
+      });
+    }
+  }}
+>
+  Request Collaboration
+</Button>
+
                 </div>
               </CardContent>
             </Card>

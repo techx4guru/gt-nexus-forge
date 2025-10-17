@@ -4,8 +4,12 @@ import profileImage from "@/assets/gt-profile.jpg";
 
 const Hero = () => {
   const handleDownloadCV = () => {
-    // Placeholder - will be replaced with actual CV link
-    window.open("#", "_blank");
+   const link = document.createElement('a');
+  link.href = '/Onisuru_Tejiri_Godstime_GT.pdf';
+  link.download = 'Onisuru_Tejiri_Godstime_GT.pdf';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
   };
 
   const handleHireMe = () => {
